@@ -3,66 +3,97 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TaskInput } from '@/components/tasks/task-input';
-import { SubtaskList } from '@/components/tasks/subtask-list';
-import { CommitmentForm } from '@/components/tasks/commitment-form';
-import { GardenPreview } from '@/components/garden/garden-preview';
-import { breakdownTask, type SubtaskData } from '@/lib/actions/ai';
-import { createTask } from '@/lib/actions/tasks';
+import { TaskReview } from '@/components/tasks/task-review';
+import { breakdownTask, modifyBreakdown } from '@/lib/api/ai';
+import type { SubtaskData, TaskBreakdown } from '@/lib/ai/types';
+import { useCreateTask } from '@/lib/api/hooks';
 import type { EffortWeight } from '@/lib/db/schema';
 
-type Step = 'input' | 'breakdown' | 'commitment';
+type Step = 'input' | 'review';
 
 export default function NewTaskPage() {
   const router = useRouter();
+  const createTask = useCreateTask();
   const [step, setStep] = useState<Step>('input');
   const [isLoading, setIsLoading] = useState(false);
+  const [isModifying, setIsModifying] = useState(false);
 
   // Task data
   const [vagueTask, setVagueTask] = useState('');
-  const [subtasks, setSubtasks] = useState<SubtaskData[]>([]);
-  const [overallWeight, setOverallWeight] = useState<EffortWeight>('medium');
+  const [currentBreakdown, setCurrentBreakdown] = useState<TaskBreakdown | null>(null);
 
   const handleTaskInput = async (task: string) => {
     setVagueTask(task);
     setIsLoading(true);
     try {
       const breakdown = await breakdownTask(task);
-      setSubtasks(breakdown.subtasks);
-      setOverallWeight(breakdown.suggestedOverallWeight);
-      setStep('breakdown');
+      setCurrentBreakdown(breakdown);
+      setStep('review');
     } catch (error) {
       console.error('Failed to break down task:', error);
       // Fallback to manual entry
-      setSubtasks([{ title: 'Complete the main task', effortWeight: 'medium' }]);
-      setStep('breakdown');
+      setCurrentBreakdown({
+        subtasks: [{ title: 'Complete the main task', effortWeight: 'medium' }],
+        suggestedOverallWeight: 'medium',
+        suggestedExpectedOutput: 'Task completed',
+      });
+      setStep('review');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBreakdownConfirm = (updatedSubtasks: SubtaskData[], weight: EffortWeight) => {
-    setSubtasks(updatedSubtasks);
-    setOverallWeight(weight);
-    setStep('commitment');
+  const handleModify = async (userMessage: string) => {
+    if (!currentBreakdown) return;
+    
+    setIsModifying(true);
+    try {
+      const updatedBreakdown = await modifyBreakdown(vagueTask, currentBreakdown, userMessage);
+      setCurrentBreakdown(updatedBreakdown);
+    } catch (error) {
+      console.error('Failed to modify breakdown:', error);
+    } finally {
+      setIsModifying(false);
+    }
   };
 
-  const handleCommitment = async (commitment: string) => {
-    setIsLoading(true);
+  const handleRegenerate = async () => {
+    setIsModifying(true);
     try {
-      const task = await createTask({
+      const breakdown = await breakdownTask(vagueTask);
+      setCurrentBreakdown(breakdown);
+    } catch (error) {
+      console.error('Failed to regenerate breakdown:', error);
+    } finally {
+      setIsModifying(false);
+    }
+  };
+
+  const handleConfirm = async (
+    subtasks: SubtaskData[], 
+    overallWeight: EffortWeight, 
+    expectedOutput: string
+  ) => {
+    setIsLoading(true);
+    createTask.mutate(
+      {
         title: vagueTask,
-        completionContract: commitment,
+        completionContract: expectedOutput,
         effortWeight: overallWeight,
         subtasks: subtasks.map(st => ({
           title: st.title,
           effortWeight: st.effortWeight as EffortWeight,
         })),
-      });
-      router.push(`/tasks/${task.id}`);
-    } catch (error) {
-      console.error('Failed to create task:', error);
-      setIsLoading(false);
-    }
+      },
+      {
+        onSuccess: (task) => {
+          router.push(`/tasks/${task.id}`);
+        },
+        onSettled: () => {
+          setIsLoading(false);
+        },
+      }
+    );
   };
 
   return (
@@ -70,23 +101,23 @@ export default function NewTaskPage() {
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-center gap-2 mb-4">
-          {(['input', 'breakdown', 'commitment'] as const).map((s, i) => (
+          {(['input', 'review'] as const).map((s, i) => (
             <div key={s} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                   step === s
                     ? 'bg-primary text-primary-foreground'
-                    : i < ['input', 'breakdown', 'commitment'].indexOf(step)
+                    : i < ['input', 'review'].indexOf(step)
                     ? 'bg-primary/20 text-primary'
                     : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {i + 1}
               </div>
-              {i < 2 && (
+              {i < 1 && (
                 <div
                   className={`w-16 h-0.5 ${
-                    i < ['input', 'breakdown', 'commitment'].indexOf(step)
+                    i < ['input', 'review'].indexOf(step)
                       ? 'bg-primary'
                       : 'bg-muted'
                   }`}
@@ -97,8 +128,7 @@ export default function NewTaskPage() {
         </div>
         <div className="text-center text-sm text-muted-foreground">
           {step === 'input' && 'Step 1: Tell me what you want to work on'}
-          {step === 'breakdown' && 'Step 2: Review your action plan'}
-          {step === 'commitment' && 'Step 3: Make your commitment'}
+          {step === 'review' && 'Step 2: Review and refine your plan'}
         </div>
       </div>
 
@@ -107,24 +137,14 @@ export default function NewTaskPage() {
         <TaskInput onSubmit={handleTaskInput} isLoading={isLoading} />
       )}
 
-      {step === 'breakdown' && (
-        <div className="space-y-6">
-          <SubtaskList
-            subtasks={subtasks}
-            suggestedWeight={overallWeight}
-            onConfirm={handleBreakdownConfirm}
-            onBack={() => setStep('input')}
-          />
-          <GardenPreview effortWeight={overallWeight} />
-        </div>
-      )}
-
-      {step === 'commitment' && (
-        <CommitmentForm
-          taskTitle={vagueTask}
-          onSubmit={handleCommitment}
-          onBack={() => setStep('breakdown')}
-          isLoading={isLoading}
+      {step === 'review' && currentBreakdown && (
+        <TaskReview
+          initialBreakdown={currentBreakdown}
+          onConfirm={handleConfirm}
+          onModify={handleModify}
+          onRegenerate={handleRegenerate}
+          onBack={() => setStep('input')}
+          isModifying={isModifying}
         />
       )}
     </div>

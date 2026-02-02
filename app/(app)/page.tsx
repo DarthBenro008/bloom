@@ -1,16 +1,39 @@
-import { redirect } from "next/navigation";
-import { getOrCreateUser } from "@/lib/actions/tasks";
+'use client';
 
-export const dynamic = "force-dynamic";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCurrentUser } from '@/lib/api/hooks';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
-export default async function AppHomePage() {
-  const user = await getOrCreateUser();
+export default function AppHomePage() {
+  const router = useRouter();
+  const { data: user, isLoading } = useCurrentUser();
 
-  // New users go to onboarding
-  if (!user.onboardingCompleted) {
-    redirect("/onboarding");
+  useEffect(() => {
+    if (user) {
+      // New users go to onboarding
+      if (!user.onboardingCompleted) {
+        router.push('/onboarding');
+      } else {
+        // Existing users go to tasks
+        router.push('/tasks');
+      }
+    }
+  }, [user, router]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="py-12 text-center flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Existing users go to tasks
-  redirect("/tasks");
+  return null;
 }

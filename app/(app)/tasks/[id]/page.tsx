@@ -1,11 +1,21 @@
+'use client';
+
+import { use } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { getTask, startTask, toggleSubtask } from '@/lib/actions/tasks';
+import { useRouter } from 'next/navigation';
+import { useTask, useStartTask, useToggleSubtask } from '@/lib/api/hooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-
-export const dynamic = 'force-dynamic';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 interface TaskPageProps {
   params: Promise<{ id: string }>;
@@ -25,49 +35,47 @@ const STATUS_LABELS = {
   abandoned: 'Abandoned',
 };
 
-async function SubtaskToggleButton({ subtaskId, isCompleted }: { subtaskId: string; isCompleted: boolean }) {
-  return (
-    <form action={async () => {
-      'use server';
-      await toggleSubtask(subtaskId);
-    }}>
-      <button
-        type="submit"
-        className={`w-5 h-5 rounded border flex items-center justify-center text-xs transition-colors ${
-          isCompleted
-            ? 'bg-primary border-primary text-primary-foreground'
-            : 'border-muted-foreground hover:border-primary'
-        }`}
-      >
-        {isCompleted && '✓'}
-      </button>
-    </form>
-  );
-}
+export default function TaskPage({ params }: TaskPageProps) {
+  const { id } = use(params);
+  const router = useRouter();
 
-async function StartTaskButton({ taskId }: { taskId: string }) {
-  return (
-    <form action={async () => {
-      'use server';
-      await startTask(taskId);
-    }}>
-      <Button type="submit">Start Working</Button>
-    </form>
-  );
-}
+  const { data: task, isLoading, error } = useTask(id);
+  const startTask = useStartTask();
+  const toggleSubtask = useToggleSubtask();
 
-export default async function TaskPage({ params }: TaskPageProps) {
-  const { id } = await params;
-  const task = await getTask(id);
-
-  if (!task) {
-    notFound();
+  if (isLoading) {
+    return <TaskDetailSkeleton />;
   }
 
-  const completedSubtasks = task.subtasks.filter(st => st.isCompleted).length;
+  if (error || !task) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Task not found</p>
+            <Button onClick={() => router.push('/tasks')} className="mt-4">
+              Back to Tasks
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const completedSubtasks = task.subtasks.filter((st) => st.isCompleted).length;
   const totalSubtasks = task.subtasks.length;
-  const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
-  const allSubtasksComplete = completedSubtasks === totalSubtasks && totalSubtasks > 0;
+  const progress =
+    totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+  const allSubtasksComplete =
+    completedSubtasks === totalSubtasks && totalSubtasks > 0;
+
+  const handleStartTask = () => {
+    startTask.mutate(id);
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+    toggleSubtask.mutate({ subtaskId, taskId: id });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -99,7 +107,9 @@ export default async function TaskPage({ params }: TaskPageProps) {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{completedSubtasks}/{totalSubtasks} steps completed</span>
+              <span className="font-medium">
+                {completedSubtasks}/{totalSubtasks} steps completed
+              </span>
             </div>
             <div className="h-3 rounded-full bg-muted overflow-hidden">
               <div
@@ -120,8 +130,26 @@ export default async function TaskPage({ params }: TaskPageProps) {
                     subtask.isCompleted ? 'bg-muted/30' : 'bg-muted/50'
                   }`}
                 >
-                  <SubtaskToggleButton subtaskId={subtask.id} isCompleted={subtask.isCompleted} />
-                  <span className={`flex-1 ${subtask.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                  <button
+                    onClick={() => handleToggleSubtask(subtask.id)}
+                    disabled={toggleSubtask.isPending}
+                    className={`w-5 h-5 rounded border flex items-center justify-center text-xs transition-colors disabled:opacity-50 ${
+                      subtask.isCompleted
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-muted-foreground hover:border-primary'
+                    }`}
+                  >
+                    {toggleSubtask.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      subtask.isCompleted && '✓'
+                    )}
+                  </button>
+                  <span
+                    className={`flex-1 ${
+                      subtask.isCompleted ? 'line-through text-muted-foreground' : ''
+                    }`}
+                  >
                     {subtask.title}
                   </span>
                   <Badge variant="outline" className="text-xs">
@@ -137,7 +165,9 @@ export default async function TaskPage({ params }: TaskPageProps) {
             <div className="pt-4 border-t space-y-4">
               {task.reflectionQuestion && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Reflection Question</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Reflection Question
+                  </p>
                   <p className="font-medium">{task.reflectionQuestion}</p>
                 </div>
               )}
@@ -159,7 +189,20 @@ export default async function TaskPage({ params }: TaskPageProps) {
         {task.status !== 'completed' && task.status !== 'abandoned' && (
           <CardFooter className="flex justify-between">
             {task.status === 'pending' ? (
-              <StartTaskButton taskId={task.id} />
+              <Button
+                onClick={handleStartTask}
+                disabled={startTask.isPending}
+                className="w-full"
+              >
+                {startTask.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  'Start Working'
+                )}
+              </Button>
             ) : (
               <div className="flex gap-4 w-full">
                 <Button asChild variant="outline" className="flex-1">
@@ -171,13 +214,49 @@ export default async function TaskPage({ params }: TaskPageProps) {
                   disabled={!allSubtasksComplete}
                 >
                   <Link href={`/tasks/${task.id}/complete`}>
-                    {allSubtasksComplete ? 'Mark Complete' : `Complete ${totalSubtasks - completedSubtasks} more steps`}
+                    {allSubtasksComplete
+                      ? 'Mark Complete'
+                      : `Complete ${totalSubtasks - completedSubtasks} more steps`}
                   </Link>
                 </Button>
               </div>
             )}
           </CardFooter>
         )}
+      </Card>
+    </div>
+  );
+}
+
+function TaskDetailSkeleton() {
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <Skeleton className="h-10 w-32 mb-6" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <Skeleton className="h-6 w-24" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-full rounded-full" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-20" />
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-full" />
+        </CardFooter>
       </Card>
     </div>
   );

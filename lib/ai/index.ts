@@ -6,4 +6,4 @@ export const anthropic = createAnthropic({
 });
 
 // Default model for all AI operations
-export const aiModel = anthropic("claude-sonnet-4-20250514");
+export const aiModel = anthropic("minimax-m2.1-free");

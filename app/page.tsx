@@ -1,8 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/lib/auth/server";
 
-export default function LandingPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LandingPage() {
+  // Check if user is already authenticated
+  const session = await auth.getSession();
+  if (session?.data?.user) {
+    // Authenticated users should go to the app
+    redirect("/tasks");
+  }
   return (
     <main className="min-h-screen">
       {/* Hero Section */}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { completeOnboarding } from '@/lib/actions/tasks';
+import { useCompleteOnboarding } from '@/lib/api/hooks';
 
 interface OnboardingFlowProps {
   welcomeMessage?: string;
@@ -108,17 +108,19 @@ const STEPS = [
 
 export function OnboardingFlow({ welcomeMessage }: OnboardingFlowProps) {
   const router = useRouter();
+  const completeOnboarding = useCompleteOnboarding();
   const [step, setStep] = useState(0);
-  const [isCompleting, setIsCompleting] = useState(false);
 
   const currentStep = STEPS[step];
   const isLastStep = step === STEPS.length - 1;
 
   const handleNext = async () => {
     if (isLastStep) {
-      setIsCompleting(true);
-      await completeOnboarding();
-      router.push('/tasks/new');
+      completeOnboarding.mutate(undefined, {
+        onSuccess: () => {
+          router.push('/tasks/new');
+        },
+      });
     } else {
       setStep(s => s + 1);
     }
@@ -129,9 +131,11 @@ export function OnboardingFlow({ welcomeMessage }: OnboardingFlowProps) {
   };
 
   const handleSkip = async () => {
-    setIsCompleting(true);
-    await completeOnboarding();
-    router.push('/tasks');
+    completeOnboarding.mutate(undefined, {
+      onSuccess: () => {
+        router.push('/tasks');
+      },
+    });
   };
 
   return (
@@ -164,16 +168,16 @@ export function OnboardingFlow({ welcomeMessage }: OnboardingFlowProps) {
         <CardFooter className="flex justify-between">
           <div>
             {step > 0 ? (
-              <Button variant="ghost" onClick={handleBack} disabled={isCompleting}>
+              <Button variant="ghost" onClick={handleBack} disabled={completeOnboarding.isPending}>
                 Back
               </Button>
             ) : (
-              <Button variant="ghost" onClick={handleSkip} disabled={isCompleting}>
+              <Button variant="ghost" onClick={handleSkip} disabled={completeOnboarding.isPending}>
                 Skip intro
               </Button>
             )}
           </div>
-          <Button onClick={handleNext} disabled={isCompleting}>
+          <Button onClick={handleNext} disabled={completeOnboarding.isPending}>
             {isLastStep ? 'Create First Task' : 'Next'}
           </Button>
         </CardFooter>

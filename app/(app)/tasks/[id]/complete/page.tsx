@@ -1,81 +1,76 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReflectionForm } from '@/components/tasks/reflection-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { initiateCompletion, completeTask, getTask } from '@/lib/actions/tasks';
-import type { Task, Subtask } from '@/lib/db/schema';
+import { useTask, useInitiateCompletion, useCompleteTask } from '@/lib/api/hooks';
+import { Loader2 } from 'lucide-react';
 
 interface CompleteTaskPageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
+  const { id } = use(params);
   const router = useRouter();
-  const [task, setTask] = useState<(Task & { subtasks: Subtask[] }) | null>(null);
-  const [reflectionQuestion, setReflectionQuestion] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
-  useEffect(() => {
-    async function loadTask() {
-      const { id } = await params;
-      const taskData = await getTask(id);
-      
-      if (!taskData || taskData.status === 'completed') {
+  // Fetch task
+  const { data: task, isLoading: taskLoading } = useTask(id);
+
+  // Initiate completion (get reflection question)
+  const initiateCompletion = useInitiateCompletion();
+  const [reflectionQuestion, setReflectionQuestion] = useState<string | null>(null);
+
+  // Complete task mutation
+  const completeTask = useCompleteTask();
+
+  // Load or generate reflection question
+  useState(() => {
+    if (task) {
+      if (task.status === 'completed') {
         router.push('/tasks');
         return;
       }
 
-      setTask(taskData);
-
-      // Generate or get existing reflection question
-      if (taskData.reflectionQuestion) {
-        setReflectionQuestion(taskData.reflectionQuestion);
+      if (task.reflectionQuestion) {
+        setReflectionQuestion(task.reflectionQuestion);
       } else {
-        const question = await initiateCompletion(id);
-        setReflectionQuestion(question);
+        initiateCompletion.mutate(id, {
+          onSuccess: (data) => {
+            setReflectionQuestion(data.question);
+          },
+        });
       }
-
-      setIsLoading(false);
     }
-
-    loadTask();
-  }, [params, router]);
+  });
 
   const handleSubmit = async (response: string) => {
-    if (!task) return;
-
-    setIsSubmitting(true);
-    try {
-      await completeTask(task.id, response);
-      setIsComplete(true);
-      
-      // Show success briefly then redirect
-      setTimeout(() => {
-        router.push('/tasks');
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to complete task:', error);
-      setIsSubmitting(false);
-    }
+    completeTask.mutate(
+      { taskId: id, reflectionResponse: response },
+      {
+        onSuccess: () => {
+          setIsComplete(true);
+          // Show success briefly then redirect
+          setTimeout(() => {
+            router.push('/tasks');
+          }, 2000);
+        },
+      }
+    );
   };
 
   const handleCancel = () => {
-    if (task) {
-      router.push(`/tasks/${task.id}`);
-    } else {
-      router.push('/tasks');
-    }
+    router.push(`/tasks/${id}`);
   };
 
-  if (isLoading) {
+  if (taskLoading || initiateCompletion.isPending) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-12 text-center flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">Preparing your reflection...</p>
           </CardContent>
         </Card>
@@ -119,7 +114,7 @@ export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
         completionContract={task.completionContract || 'Something meaningful'}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
-        isLoading={isSubmitting}
+        isLoading={completeTask.isPending}
       />
     </div>
   );

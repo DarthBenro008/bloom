@@ -1,20 +1,51 @@
-import Link from "next/link";
-import { getUserTasks, getUserGarden } from "@/lib/actions/tasks";
-import { TaskCard } from "@/components/tasks/task-card";
-import { GardenCanvas } from "@/components/garden/garden-canvas";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+'use client';
 
-export const dynamic = "force-dynamic";
+import Link from 'next/link';
+import { useTasks, useGarden } from '@/lib/api/hooks';
+import { TaskCard } from '@/components/tasks/task-card';
+import { GardenCanvas } from '@/components/garden/garden-canvas';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
-export default async function TasksPage() {
-  const [tasks, garden] = await Promise.all([
-    getUserTasks(),
-    getUserGarden(),
-  ]);
+export default function TasksPage() {
+  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks();
+  const { data: garden, isLoading: gardenLoading } = useGarden();
 
-  const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'abandoned');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  if (tasksLoading || gardenLoading) {
+    return <TasksPageSkeleton />;
+  }
+
+  if (tasksError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Failed to load tasks. Please try again.</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!tasks || !garden) {
+    return null;
+  }
+
+  const activeTasks = tasks.filter(
+    (t) => t.status !== 'completed' && t.status !== 'abandoned'
+  );
+  const completedTasks = tasks.filter((t) => t.status === 'completed');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -87,11 +118,15 @@ export default async function TasksPage() {
             <CardContent className="pt-6">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-primary">{garden.plants.length}</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {garden.plants.length}
+                  </p>
                   <p className="text-xs text-muted-foreground">Plants</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{completedTasks.length}</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {completedTasks.length}
+                  </p>
                   <p className="text-xs text-muted-foreground">Completed</p>
                 </div>
                 <div>
@@ -101,6 +136,30 @@ export default async function TasksPage() {
               </div>
             </CardContent>
           </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function TasksPageSkeleton() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid lg:grid-cols-[1fr_400px] gap-8">
+        <div className="space-y-8">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-40 w-full" />
+            ))}
+          </div>
+        </div>
+        <aside className="space-y-4">
+          <Skeleton className="h-[400px] w-full" />
+          <Skeleton className="h-24 w-full" />
         </aside>
       </div>
     </div>
