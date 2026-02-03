@@ -61,7 +61,8 @@ export async function POST(
       subtaskTitles,
       task.effortWeight,
       task.completionContract || '',
-      reflectionResponse
+      reflectionResponse,
+      { taskId: id, userId, effortWeight: task.effortWeight }
     );
 
     // Update task

@@ -4,6 +4,7 @@ import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { EvaluatePlausibilityRequestSchema, PlausibilitySchema } from '@/lib/ai/types';
 import { auth } from '@/lib/auth/server';
+import { getAITelemetry } from '@/lib/ai/telemetry';
 
 /**
  * POST /api/ai/evaluate-plausibility
@@ -44,6 +45,10 @@ Completion Contract (what user said would exist): ${completionContract}
 User's Reflection Response: ${reflectionResponse}
 
 Assess whether real work likely happened.`,
+      experimental_telemetry: getAITelemetry('plausibility-evaluation', {
+        userId: session.data.user.id,
+        effortWeight: effortWeight.toString(),
+      }),
     });
 
     return NextResponse.json(result.object);

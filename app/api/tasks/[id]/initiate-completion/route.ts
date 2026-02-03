@@ -44,7 +44,8 @@ export async function POST(
     const question = await generateReflectionQuestionDirect(
       task.title,
       subtaskTitles,
-      task.completionContract || 'Something meaningful'
+      task.completionContract || 'Something meaningful',
+      { taskId: id, userId }
     );
 
     // Store the question

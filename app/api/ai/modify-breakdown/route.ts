@@ -4,6 +4,7 @@ import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { ModifyBreakdownRequestSchema, BreakdownSchema } from '@/lib/ai/types';
 import { auth } from '@/lib/auth/server';
+import { getAITelemetry } from '@/lib/ai/telemetry';
 
 /**
  * POST /api/ai/modify-breakdown
@@ -37,6 +38,9 @@ ${JSON.stringify(currentBreakdown, null, 2)}
 User's modification request: "${userMessage}"
 
 Please provide an updated breakdown that addresses the user's request.`,
+      experimental_telemetry: getAITelemetry('modify-breakdown', {
+        userId: session.data.user.id,
+      }),
     });
 
     return NextResponse.json(result.object);

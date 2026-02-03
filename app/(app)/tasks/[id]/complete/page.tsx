@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ReflectionForm } from '@/components/tasks/reflection-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,8 +27,8 @@ export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
   const completeTask = useCompleteTask();
 
   // Load or generate reflection question
-  useState(() => {
-    if (task) {
+  useEffect(() => {
+    if (task && !reflectionQuestion && !initiateCompletion.isPending) {
       if (task.status === 'completed') {
         router.push('/tasks');
         return;
@@ -44,7 +44,7 @@ export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
         });
       }
     }
-  });
+  }, [task, reflectionQuestion, initiateCompletion, id, router]);
 
   const handleSubmit = async (response: string) => {
     completeTask.mutate(

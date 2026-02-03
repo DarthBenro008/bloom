@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // instrumentation.ts is loaded by default in Next.js 16+
 };
 
 export default nextConfig;

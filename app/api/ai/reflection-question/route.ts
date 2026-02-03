@@ -4,6 +4,7 @@ import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { ReflectionQuestionRequestSchema } from '@/lib/ai/types';
 import { auth } from '@/lib/auth/server';
+import { getAITelemetry } from '@/lib/ai/telemetry';
 
 /**
  * POST /api/ai/reflection-question
@@ -33,6 +34,9 @@ Subtasks completed: ${subtasks.join(', ')}
 What the user committed to create: ${completionContract}
 
 Generate a single reflection question for this completed task.`,
+      experimental_telemetry: getAITelemetry('reflection-question', {
+        userId: session.data.user.id,
+      }),
     });
 
     return NextResponse.json({ question: result.text.trim() });

@@ -4,6 +4,7 @@ import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { BreakdownRequestSchema, BreakdownSchema } from '@/lib/ai/types';
 import { auth } from '@/lib/auth/server';
+import { getAITelemetry } from '@/lib/ai/telemetry';
 
 /**
  * POST /api/ai/breakdown
@@ -35,6 +36,9 @@ Provide:
 1. A list of 2-6 actionable subtasks with effort weights
 2. An overall effort level for the entire task
 3. A concrete description of what will exist after this task is done`,
+      experimental_telemetry: getAITelemetry('task-breakdown', {
+        userId: session.data.user.id,
+      }),
     });
 
     return NextResponse.json(result.object);

@@ -3,6 +3,7 @@ import { generateText } from 'ai';
 import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { auth } from '@/lib/auth/server';
+import { getAITelemetry } from '@/lib/ai/telemetry';
 
 /**
  * GET /api/ai/welcome
@@ -24,6 +25,9 @@ export async function GET(request: NextRequest) {
       model: aiModel,
       system: AI_PROMPTS.ONBOARDING_WELCOME,
       prompt: 'Welcome a new user to Bloom.',
+      experimental_telemetry: getAITelemetry('welcome-message', {
+        userId: session.data.user.id,
+      }),
     });
 
     return NextResponse.json({ message: result.text.trim() });

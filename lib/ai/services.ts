@@ -7,6 +7,7 @@ import { generateText, generateObject } from 'ai';
 import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { z } from 'zod';
+import { getAITelemetry, type TelemetryContext } from './telemetry';
 
 /**
  * Generate a reflection question for task completion
@@ -15,7 +16,8 @@ import { z } from 'zod';
 export async function generateReflectionQuestionDirect(
   taskTitle: string,
   subtasks: string[],
-  completionContract: string
+  completionContract: string,
+  context?: TelemetryContext
 ): Promise<string> {
   const result = await generateText({
     model: aiModel,
@@ -25,6 +27,7 @@ Subtasks completed: ${subtasks.join(', ')}
 What the user committed to create: ${completionContract}
 
 Generate a single reflection question for this completed task.`,
+    experimental_telemetry: getAITelemetry('reflection-question', context),
   });
 
   return result.text.trim();
@@ -47,7 +50,8 @@ export async function evaluatePlausibilityDirect(
   subtasks: string[],
   effortWeight: string,
   completionContract: string,
-  reflectionResponse: string
+  reflectionResponse: string,
+  context?: TelemetryContext
 ): Promise<PlausibilityResult> {
   const result = await generateObject({
     model: aiModel,
@@ -62,6 +66,10 @@ Completion Contract (what user said would exist): ${completionContract}
 User's Reflection Response: ${reflectionResponse}
 
 Assess whether real work likely happened.`,
+    experimental_telemetry: getAITelemetry('plausibility-evaluation', {
+      ...context,
+      effortWeight,
+    }),
   });
 
   return result.object;
