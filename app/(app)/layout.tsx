@@ -32,7 +32,9 @@ export default function AppLayout({
               <Button asChild size="sm">
                 <Link href="/tasks/new">New Task</Link>
               </Button>
-              <UserButton />
+              <div className="flex items-center">
+                <UserButton size={"icon"}/>
+              </div>
             </div>
           </div>
         </header>

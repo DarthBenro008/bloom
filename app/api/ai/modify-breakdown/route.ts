@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateObject } from 'ai';
+import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { ModifyBreakdownRequestSchema, BreakdownSchema } from '@/lib/ai/types';
@@ -26,9 +26,13 @@ export async function POST(request: NextRequest) {
     const { originalTask, currentBreakdown, userMessage } = ModifyBreakdownRequestSchema.parse(body);
 
     // Generate modified breakdown using AI
-    const result = await generateObject({
+    const result = await generateText({
       model: aiModel,
-      schema: BreakdownSchema,
+      output: Output.object({
+        name: 'ModifiedTaskBreakdown',
+        description: 'An updated task breakdown based on user feedback and modification requests',
+        schema: BreakdownSchema,
+      }),
       system: AI_PROMPTS.MODIFY_BREAKDOWN,
       prompt: `Original task: "${originalTask}"
 
@@ -43,7 +47,7 @@ Please provide an updated breakdown that addresses the user's request.`,
       }),
     });
 
-    return NextResponse.json(result.object);
+    return NextResponse.json(result.output);
   } catch (error) {
     console.error('Error in modify-breakdown route:', error);
     
@@ -51,6 +55,19 @@ Please provide an updated breakdown that addresses the user's request.`,
       return NextResponse.json(
         { error: 'Invalid request body' },
         { status: 400 }
+      );
+    }
+
+    if (NoObjectGeneratedError.isInstance(error)) {
+      console.error('Failed to generate modified breakdown:', {
+        cause: error.cause,
+        text: error.text,
+        response: error.response,
+        usage: error.usage,
+      });
+      return NextResponse.json(
+        { error: 'Failed to generate valid modified breakdown' },
+        { status: 500 }
       );
     }
 

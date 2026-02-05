@@ -3,7 +3,7 @@
  * These functions can be called directly from API routes without HTTP overhead
  */
 
-import { generateText, generateObject } from 'ai';
+import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { z } from 'zod';
@@ -53,11 +53,16 @@ export async function evaluatePlausibilityDirect(
   reflectionResponse: string,
   context?: TelemetryContext
 ): Promise<PlausibilityResult> {
-  const result = await generateObject({
-    model: aiModel,
-    schema: PlausibilitySchema,
-    system: AI_PROMPTS.PLAUSIBILITY_EVALUATION,
-    prompt: `Evaluate the plausibility of this task completion:
+  try {
+    const result = await generateText({
+      model: aiModel,
+      output: Output.object({
+        name: 'PlausibilityEvaluation',
+        description: 'An evaluation of whether a task completion is plausible based on the user\'s reflection',
+        schema: PlausibilitySchema,
+      }),
+      system: AI_PROMPTS.PLAUSIBILITY_EVALUATION,
+      prompt: `Evaluate the plausibility of this task completion:
 
 Task: ${taskTitle}
 Subtasks: ${subtasks.join(', ')}
@@ -66,11 +71,22 @@ Completion Contract (what user said would exist): ${completionContract}
 User's Reflection Response: ${reflectionResponse}
 
 Assess whether real work likely happened.`,
-    experimental_telemetry: getAITelemetry('plausibility-evaluation', {
-      ...context,
-      effortWeight,
-    }),
-  });
+      experimental_telemetry: getAITelemetry('plausibility-evaluation', {
+        ...context,
+        effortWeight,
+      }),
+    });
 
-  return result.object;
+    return result.output;
+  } catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      console.error('Failed to generate plausibility evaluation:', {
+        cause: error.cause,
+        text: error.text,
+        response: error.response,
+        usage: error.usage,
+      });
+    }
+    throw error;
+  }
 }

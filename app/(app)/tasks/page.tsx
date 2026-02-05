@@ -1,22 +1,27 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useTasks, useGarden } from '@/lib/api/hooks';
-import { TaskCard } from '@/components/tasks/task-card';
-import { GardenCanvas } from '@/components/garden/garden-canvas';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { useTasks, useGarden } from "@/lib/api/hooks";
+import { TaskCard } from "@/components/tasks/task-card";
+import { GardenCanvas } from "@/components/garden/garden-canvas";
+import { MotivationalQuote } from "@/components/ui/motivational-quote";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2 } from 'lucide-react';
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 export default function TasksPage() {
-  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks();
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    error: tasksError,
+  } = useTasks();
   const { data: garden, isLoading: gardenLoading } = useGarden();
 
   if (tasksLoading || gardenLoading) {
@@ -28,7 +33,9 @@ export default function TasksPage() {
       <div className="container mx-auto px-4 py-8">
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-destructive">Failed to load tasks. Please try again.</p>
+            <p className="text-destructive">
+              Failed to load tasks. Please try again.
+            </p>
             <Button onClick={() => window.location.reload()} className="mt-4">
               Retry
             </Button>
@@ -43,12 +50,15 @@ export default function TasksPage() {
   }
 
   const activeTasks = tasks.filter(
-    (t) => t.status !== 'completed' && t.status !== 'abandoned'
+    (t) => t.status !== "completed" && t.status !== "abandoned",
   );
-  const completedTasks = tasks.filter((t) => t.status === 'completed');
+  const completedTasks = tasks.filter((t) => t.status === "completed");
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Motivational Quote */}
+      <MotivationalQuote />
+
       <div className="grid lg:grid-cols-[1fr_400px] gap-8">
         {/* Main content */}
         <div className="space-y-8">
@@ -56,9 +66,9 @@ export default function TasksPage() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">Active Tasks</h2>
-              <Button asChild>
+              {/*<Button asChild>
                 <Link href="/tasks/new">New Task</Link>
-              </Button>
+              </Button>*/}
             </div>
 
             {activeTasks.length === 0 ? (
@@ -130,7 +140,9 @@ export default function TasksPage() {
                   <p className="text-xs text-muted-foreground">Completed</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">{garden.health}%</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {garden.health}%
+                  </p>
                   <p className="text-xs text-muted-foreground">Health</p>
                 </div>
               </div>

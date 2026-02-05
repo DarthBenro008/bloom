@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateObject } from 'ai';
+import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { aiModel } from '@/lib/ai';
 import { AI_PROMPTS } from '@/lib/ai/prompts';
 import { EvaluatePlausibilityRequestSchema, PlausibilitySchema } from '@/lib/ai/types';
@@ -32,9 +32,13 @@ export async function POST(request: NextRequest) {
     } = EvaluatePlausibilityRequestSchema.parse(body);
 
     // Evaluate plausibility using AI
-    const result = await generateObject({
+    const result = await generateText({
       model: aiModel,
-      schema: PlausibilitySchema,
+      output: Output.object({
+        name: 'PlausibilityEvaluation',
+        description: 'An evaluation of whether a task completion is plausible based on the user\'s reflection',
+        schema: PlausibilitySchema,
+      }),
       system: AI_PROMPTS.PLAUSIBILITY_EVALUATION,
       prompt: `Evaluate the plausibility of this task completion:
 
@@ -51,7 +55,7 @@ Assess whether real work likely happened.`,
       }),
     });
 
-    return NextResponse.json(result.object);
+    return NextResponse.json(result.output);
   } catch (error) {
     console.error('Error in evaluate-plausibility route:', error);
     
@@ -59,6 +63,19 @@ Assess whether real work likely happened.`,
       return NextResponse.json(
         { error: 'Invalid request body' },
         { status: 400 }
+      );
+    }
+
+    if (NoObjectGeneratedError.isInstance(error)) {
+      console.error('Failed to generate plausibility evaluation:', {
+        cause: error.cause,
+        text: error.text,
+        response: error.response,
+        usage: error.usage,
+      });
+      return NextResponse.json(
+        { error: 'Failed to generate valid plausibility evaluation' },
+        { status: 500 }
       );
     }
 

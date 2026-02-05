@@ -91,15 +91,13 @@ export function TaskCard({ task }: TaskCardProps) {
           </ul>
         )}
       </CardContent>
-      <CardFooter className="pt-0">
-        <div className="flex items-center justify-between w-full">
-          <Badge variant="outline">{EFFORT_LABELS[task.effortWeight]}</Badge>
-          <Button asChild variant="ghost" size="sm">
-            <Link href={`/tasks/${task.id}`}>
-              {task.status === 'completed' ? 'View' : 'Continue'}
-            </Link>
-          </Button>
-        </div>
+      <CardFooter className="pt-3 justify-between">
+        <Badge variant="outline">{EFFORT_LABELS[task.effortWeight]}</Badge>
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/tasks/${task.id}`}>
+            {task.status === 'completed' ? 'View' : 'Continue'}
+          </Link>
+        </Button>
       </CardFooter>
     </Card>
   );

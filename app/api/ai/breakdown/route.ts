@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generateObject } from 'ai';
-import { aiModel } from '@/lib/ai';
-import { AI_PROMPTS } from '@/lib/ai/prompts';
-import { BreakdownRequestSchema, BreakdownSchema } from '@/lib/ai/types';
-import { auth } from '@/lib/auth/server';
-import { getAITelemetry } from '@/lib/ai/telemetry';
+import { NextRequest, NextResponse } from "next/server";
+import { generateText, Output, NoObjectGeneratedError } from "ai";
+import { aiModel } from "@/lib/ai";
+import { AI_PROMPTS } from "@/lib/ai/prompts";
+import { BreakdownRequestSchema, BreakdownSchema } from "@/lib/ai/types";
+import { auth } from "@/lib/auth/server";
+import { getAITelemetry } from "@/lib/ai/telemetry";
 
 /**
  * POST /api/ai/breakdown
@@ -15,10 +15,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await auth.getSession();
     if (!session?.data?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Parse and validate request body
@@ -26,9 +23,13 @@ export async function POST(request: NextRequest) {
     const { vagueTask } = BreakdownRequestSchema.parse(body);
 
     // Generate breakdown using AI
-    const result = await generateObject({
+    const result = await generateText({
       model: aiModel,
-      schema: BreakdownSchema,
+      output: Output.object({
+        name: 'TaskBreakdown',
+        description: 'A structured breakdown of a vague task into concrete, actionable subtasks with effort estimates',
+        schema: BreakdownSchema,
+      }),
       system: AI_PROMPTS.TASK_BREAKDOWN,
       prompt: `Break down this task into concrete, actionable steps: "${vagueTask}"
 
@@ -36,25 +37,38 @@ Provide:
 1. A list of 2-6 actionable subtasks with effort weights
 2. An overall effort level for the entire task
 3. A concrete description of what will exist after this task is done`,
-      experimental_telemetry: getAITelemetry('task-breakdown', {
+      experimental_telemetry: getAITelemetry("task-breakdown", {
         userId: session.data.user.id,
       }),
     });
 
-    return NextResponse.json(result.object);
+    return NextResponse.json(result.output);
   } catch (error) {
-    console.error('Error in breakdown route:', error);
-    
-    if (error instanceof Error && error.name === 'ZodError') {
+    console.error("Error in breakdown route:", error);
+
+    if (error instanceof Error && error.name === "ZodError") {
       return NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+
+    if (NoObjectGeneratedError.isInstance(error)) {
+      console.error('Failed to generate task breakdown:', {
+        cause: error.cause,
+        text: error.text,
+        response: error.response,
+        usage: error.usage,
+      });
+      return NextResponse.json(
+        { error: "Failed to generate valid task breakdown" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to break down task' },
-      { status: 500 }
+      { error: "Failed to break down task" },
+      { status: 500 },
     );
   }
 }
