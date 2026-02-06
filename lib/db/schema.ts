@@ -71,6 +71,7 @@ export const plants = pgTable('plants', {
 export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
   plants: many(plants),
+  moods: many(moods),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -103,6 +104,23 @@ export const plantsRelations = relations(plants, ({ one }) => ({
   }),
 }));
 
+// Moods table (daily mood check-ins)
+export const moods = pgTable('moods', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  mood: text('mood').notNull(),           // emoji or mood type
+  note: text('note'),                      // optional elaboration
+  aiResponse: text('ai_response'),         // AI's encouraging response
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const moodsRelations = relations(moods, ({ one }) => ({
+  user: one(users, {
+    fields: [moods.userId],
+    references: [users.id],
+  }),
+}));
+
 // Type exports for use in the app
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -112,3 +130,5 @@ export type Subtask = typeof subtasks.$inferSelect;
 export type NewSubtask = typeof subtasks.$inferInsert;
 export type Plant = typeof plants.$inferSelect;
 export type NewPlant = typeof plants.$inferInsert;
+export type Mood = typeof moods.$inferSelect;
+export type NewMood = typeof moods.$inferInsert;

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useTasks, useGarden } from "@/lib/api/hooks";
 import { TaskCard } from "@/components/tasks/task-card";
-import { GardenCanvas } from "@/components/garden/garden-canvas";
+import { Garden3D } from "@/components/garden/garden-3d";
+import { MoodCheckin } from "@/components/garden/mood-checkin";
 import { MotivationalQuote } from "@/components/ui/motivational-quote";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +79,7 @@ export default function TasksPage() {
                     No active tasks. Start something new to grow your garden!
                   </p>
                   <Button asChild>
-                    <Link href="/tasks/new">Create Your First Task</Link>
+                    <Link href="/tasks/new">Create Your Task</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -111,6 +112,10 @@ export default function TasksPage() {
 
         {/* Garden sidebar */}
         <aside className="space-y-4">
+          {/* Mood Check-in */}
+          <MoodCheckin />
+
+          {/* 3D Garden */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Your Garden</CardTitle>
@@ -119,7 +124,7 @@ export default function TasksPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <GardenCanvas plants={garden.plants} width={360} height={360} />
+              <Garden3D plants={garden.plants} width={360} height={360} />
             </CardContent>
           </Card>
 
