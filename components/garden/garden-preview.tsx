@@ -35,7 +35,7 @@ export function GardenPreview({ effortWeight }: GardenPreviewProps) {
               <Info className="h-4 w-4" />
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogContent size="lg" className="max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg">
                 🌱 How Your Garden Grows

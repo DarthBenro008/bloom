@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTasks, useGarden } from "@/lib/api/hooks";
 import { TaskCard } from "@/components/tasks/task-card";
-import { Garden3D } from "@/components/garden/garden-3d";
+import { GardenExpandable } from "@/components/garden/garden-expandable";
 import { MoodCheckin } from "@/components/garden/mood-checkin";
 import { MotivationalQuote } from "@/components/ui/motivational-quote";
 import { Button } from "@/components/ui/button";
@@ -124,7 +124,11 @@ export default function TasksPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Garden3D plants={garden.plants} width={360} height={360} />
+              <GardenExpandable 
+                plants={garden.plants} 
+                health={garden.health}
+                completedCount={completedTasks.length}
+              />
             </CardContent>
           </Card>
 
