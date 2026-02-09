@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth/server';
 /**
  * GET /api/garden
  * Get user's garden (all plants)
+ * Auto-creates user record if not found (for new signups)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,13 +19,21 @@ export async function GET(request: NextRequest) {
 
     const userId = session.data.user.id;
 
-    // Get user
-    const user = await db.query.users.findFirst({
+    // Get or create user
+    let user = await db.query.users.findFirst({
       where: eq(users.id, userId),
     });
 
+    // Auto-create user if not found (handles new signups before onboarding)
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.log(`Creating new user record for ${userId} in garden API`);
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          id: userId,
+        })
+        .returning();
+      user = newUser;
     }
 
     // Get user plants

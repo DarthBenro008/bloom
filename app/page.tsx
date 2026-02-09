@@ -19,8 +19,9 @@ export default async function LandingPage() {
   // Check if user is already authenticated
   const session = await auth.getSession();
   if (session?.data?.user) {
-    // Authenticated users should go to the app
-    redirect("/tasks");
+    // Authenticated users should go to the app home
+    // which handles onboarding check and redirects appropriately
+    redirect("/");
   }
 
   return (
