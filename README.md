@@ -116,29 +116,6 @@ This structured approach enables:
 - **User journey analysis**: Track AI performance across entire user workflows
 - **Metadata filtering**: Analyze performance by task difficulty, user behavior, etc.
 
-### 🚀 **OpenTelemetry Integration**
-
-Bloom uses Vercel's OpenTelemetry SDK with Opik's exporter for seamless instrumentation:
-
-```typescript
-// instrumentation.ts
-import { registerOTel } from "@vercel/otel";
-import { OpikExporter } from "opik-vercel";
-
-export function register() {
-  registerOTel({
-    serviceName: "bloom",
-    traceExporter: new OpikExporter({
-      tags: ["bloom", "productivity", "ai-tasks"],
-      metadata: {
-        project: "bloom",
-        environment: process.env.NODE_ENV || "development",
-        version: "1.0.0",
-      },
-    }),
-  });
-}
-```
 
 ### 📊 **Multi-Model Performance Tracking**
 
@@ -166,36 +143,6 @@ All model switches are automatically tracked through Opik's traces, enabling dat
 - **User experience**: Identify slow AI calls affecting UX
 - **Cost optimization**: Track token usage to optimize prompts and reduce costs
 - **Quality assurance**: Continuously evaluate AI output quality across all features
-
----
-
-## MIT License
-
-```
-MIT License
-
-Copyright (c) 2025 Bloom
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
 
 <div align="center">
   <p>Built with ❤️ and one can of Monster</p>
